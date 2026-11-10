@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<script>
+/* FIRSTNAME-ONLY v1 (16 Oct 2026): the sign-in keeps the pupil's first name only.
+   A one-letter initial typed after it is kept ("Ahmed A"), so two pupils with the same first name stay apart.
+   Also rewrites saves/loads to the class store, so a remembered full name cannot recreate a surname record.
+   Beyond the Classroom (sc-*) books are left alone. */
+(function(){
+  function fn(s){
+    s=String(s==null?'':s).replace(/\s+/g,' ').trim(); if(!s) return s;
+    if(/^yu luo(\s|$)/i.test(s)) return s.slice(0,6);
+    var w=s.split(' '); if(w.length<2) return s;
+    if(w.length===2 && w[1].replace(/[^A-Za-z]/g,'').length===1) return w[0]+' '+w[1].replace(/[^A-Za-z]/g,'');
+    return w[0];
+  }
+  window.__firstNameOnly=fn;
+  var ST='vestigia-store.mrbeasley930.workers.dev';
+  function skip(b){ return /^sc-/.test(String(b||'')); }
+  function fixKey(k){ k=String(k); var p=k.split('::'); if(p.length<3||skip(p[0])) return k; return p[0]+'::'+p[1]+'::'+fn(p.slice(2).join('::')); }
+  var of=window.fetch;
+  if(of) window.fetch=function(input,init){
+    try{
+      var url=typeof input==='string'?input:(input&&input.url)||'';
+      if(url.indexOf(ST)>=0 && !/[?&]all=1/.test(url)){
+        var u=new URL(url,location.href), k=u.searchParams.get('key');
+        if(k){ var nk=fixKey(k); if(nk!==k){ u.searchParams.set('key',nk); input=(typeof input==='string')?u.toString():new Request(u.toString(),input); } }
+        if(init && typeof init.body==='string' && /post|put/i.test(init.method||'')){
+          var b=JSON.parse(init.body);
+          if(b && b.key && !skip(b.book||String(b.key).split('::')[0])){
+            b.key=fixKey(b.key);
+            if(typeof b.cand==='string') b.cand=fn(b.cand);
+            if(b.data && typeof b.data==='object' && typeof b.data.name==='string') b.data.name=fn(b.data.name);
+            init=Object.assign({},init,{body:JSON.stringify(b)});
+          }
+        }
+      }
+    }catch(e){}
+    return of.call(this,input,init);
+  };
+  var IDS=['g-cand','sg-cand','cand','gName'];
+  function tidy(t){ IDS.forEach(function(id){ var el=document.getElementById(id); if(el && el!==t && el.value && /\S\s+\S/.test(el.value)) el.value=fn(el.value); }); }
+  document.addEventListener('click',function(e){ tidy(e.target); },true);
+  document.addEventListener('keydown',function(e){ if(e.key==='Enter') tidy(null); },true);
+  document.addEventListener('submit',function(){ tidy(null); },true);
+  document.addEventListener('change',function(){ tidy(null); },true);
+})();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Odyssey: Female and Monstrous Figures (Group Grid)</title>
+<style>
+  :root{
+    /* House look of the Year 12 Odyssey pages: navy ground, gold titles, parchment cards for writing. */
+    --navy:#12283a; --navy2:#1c3a52; --ink:#1a2a3a; --gold:#d4af37; --sea:#8fb3c9;
+    --card:#fbf8ef; --line:#d9cfb4; --muted:#5d6b78; --ok:#2f7d4f; --warn:#b3261e;
+    --circe:#8a4fa3; --sirens:#c9892b; --scylla:#a8402f; --charybdis:#1f6f8b; --calypso:#3d8a66;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Georgia,'Palatino Linotype',serif;background:linear-gradient(135deg,#1a3a52 0%,#0f1419 55%,#2d1b4e 100%);
+    background-attachment:fixed;color:#e9e4d4;min-height:100vh;padding:20px 16px 60px;line-height:1.55}
+  .wrap{max-width:1180px;margin:0 auto}
+  header{text-align:center;margin-bottom:16px}
+  .logo{font-size:32px;color:var(--gold);letter-spacing:4px;text-shadow:2px 2px 5px rgba(0,0,0,.6)}
+  .sub{color:#c9b97a;font-style:italic;margin-top:6px;font-size:15px}
+  .spec{color:#7e93a3;font-size:12.5px;margin-top:4px;letter-spacing:1px}
+  .bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:center;background:rgba(20,34,46,.85);
+    border:1px solid #36617f;border-radius:8px;padding:9px 14px;margin-bottom:14px;font-size:13.5px;color:var(--sea)}
+  .bar b{color:var(--gold)}
+  .linkbtn{background:none;border:0;color:var(--sea);text-decoration:underline;cursor:pointer;font:inherit}
+  .tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .tab{padding:9px 14px;font-family:Georgia,serif;font-size:14px;font-weight:bold;cursor:pointer;border-radius:7px 7px 0 0;
+    border:1px solid #36617f;border-bottom:3px solid transparent;background:rgba(20,34,46,.85);color:var(--sea)}
+  .tab.active{background:var(--card);color:var(--ink);border-bottom-color:var(--gold)}
+  .tab:focus-visible,.btn:focus-visible,.chip:focus-visible,.figbtn:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+  .panel{display:none}
+  .panel.active{display:block}
+  .card{background:var(--card);color:var(--ink);border-radius:10px;padding:20px 22px;margin-bottom:14px;border-left:6px solid var(--gold)}
+  .card h2{font-size:21px;color:#1F3864;margin-bottom:6px}
+  .card h3{font-size:17px;color:#1F3864;margin:2px 0 4px}
+  .card p{margin:6px 0;max-width:72ch}
+  .ref{display:inline-block;font-size:12.5px;font-weight:bold;letter-spacing:.5px;color:#fff;background:#1F3864;border-radius:4px;padding:2px 8px;margin-right:8px;vertical-align:2px}
+  .q{margin-top:14px}
+  .q label{display:block;font-weight:bold;font-size:15px;max-width:72ch}
+  .q .hint{font-size:13px;color:var(--muted);font-weight:normal}
+  textarea,input[type=text]{width:100%;font-family:Georgia,serif;font-size:15px;color:var(--ink);background:#fff;border:1px solid #c5d0e0;border-radius:6px;padding:9px 11px;margin-top:6px;line-height:1.5}
+  textarea{min-height:84px;resize:vertical}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}
+  .chip{font-family:Georgia,serif;font-size:14px;padding:6px 12px;border-radius:18px;border:1px solid #9aa9bb;background:#fff;color:var(--ink);cursor:pointer}
+  .chip[aria-pressed=true]{background:#1F3864;color:#fff;border-color:#1F3864}
+  .scale{display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap}
+  .scale .chip{min-width:40px;text-align:center}
+  .scale span{font-size:13px;color:var(--muted)}
+  .btn{padding:10px 18px;font-family:Georgia,serif;font-size:14.5px;font-weight:bold;cursor:pointer;border-radius:6px;border:0;background:#1F3864;color:#fff}
+  .btn.gold{background:var(--gold);color:#1a2a3a}
+  .btn.ghost{background:#fff;color:#1F3864;border:1px solid #1F3864}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+  .note{font-size:13.5px;color:var(--muted)}
+  /* figure picker */
+  .figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:14px}
+  .figbtn{text-align:left;font-family:Georgia,serif;background:#fff;color:var(--ink);border:1px solid var(--line);border-top:6px solid var(--gold);border-radius:8px;padding:14px;cursor:pointer}
+  .figbtn b{display:block;font-size:19px}
+  .figbtn .w{font-size:13px;color:var(--muted)}
+  .figbtn .who{display:block;margin-top:8px;font-size:13.5px;font-weight:bold}
+  .figbtn.taken .who{color:var(--warn)} .figbtn.free .who{color:var(--ok)}
+  /* grid */
+  .gridwrap{overflow-x:auto;background:var(--card);border-radius:10px;border-left:6px solid var(--gold)}
+  table.grid{border-collapse:collapse;width:100%;min-width:980px;color:var(--ink);font-size:14.5px}
+  table.grid th,table.grid td{border:1px solid var(--line);padding:9px 10px;vertical-align:top;text-align:left}
+  table.grid thead th{color:#fff;font-size:17px}
+  table.grid thead th small{display:block;font-weight:normal;font-size:12.5px;opacity:.92}
+  table.grid th.rowh{background:#efe8d4;width:150px;font-size:13.5px;position:sticky;left:0;z-index:1}
+  table.grid thead th.rowh{background:#1F3864}
+  .tag{display:inline-block;font-size:12.5px;background:#e6ecf5;border-radius:10px;padding:1px 8px;margin:0 4px 4px 0}
+  .meter{display:flex;gap:3px;margin-top:2px}
+  .meter i{width:16px;height:10px;border-radius:2px;background:#ddd4bd;display:block}
+  .meter i.on{background:#1F3864}
+  .empty{color:#98a2ad;font-style:italic}
+  .pill{display:inline-block;font-size:12px;border-radius:10px;padding:1px 8px;background:#fff;color:var(--ink);margin-top:4px}
+  ol.disc{margin:8px 0 0 22px;max-width:74ch}
+  ol.disc li{margin-bottom:8px}
+  @media (max-width:520px){.logo{font-size:24px;letter-spacing:2px}.card{padding:16px}}
+  @media print{body{background:#fff;color:#000;padding:0}.tabs,.bar,.row,#rp-gate{display:none!important}.panel{display:block!important}.card,.gridwrap{border:1px solid #999}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">FEMALE AND MONSTROUS FIGURES</div>
+    <div class="sub">Circe, the Sirens, Scylla, Charybdis and Calypso: one each, then compare</div>
+    <div class="spec">YEAR 12 CLASSICAL CIVILISATION · THE WORLD OF THE HERO · ODYSSEY BOOKS 5, 10 AND 12</div>
+  </header>
+
+  <div class="bar">
+    <span id="whoami">Not signed in</span>
+    <span id="figline"></span>
+    <span id="sync">&nbsp;</span>
+    <button class="linkbtn" id="changefig" type="button" hidden>Change figure</button>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" type="button" data-tab="start">Start</button>
+    <button class="tab" type="button" data-tab="read">1 Your passages</button>
+    <button class="tab" type="button" data-tab="judge">2 Your judgements</button>
+    <button class="tab" type="button" data-tab="grid">3 The class grid</button>
+    <button class="tab" type="button" data-tab="conc">4 Compare and conclude</button>
+  </div>
+
+  <section class="panel active" id="p-start">
+    <div class="card">
+      <h2>What you are doing</h2>
+      <p>Odysseus meets five female figures on the way home who could stop him getting there. Each of you takes one of them. You read her passages in Wilson's translation, answer the questions, and then make a set of judgements about her.</p>
+      <p>Everyone makes the same judgements, so your answers go into one grid that the whole class can see. When all five columns are filled in, you compare the figures and agree three conclusions about gender and danger in the poem.</p>
+      <p>Have your copy of Wilson open. The line numbers are Wilson's. If a passage seems to start a line or two early or late, read from the nearest full stop.</p>
+    </div>
+    <div class="card" id="pickcard">
+      <h2>Choose your figure</h2>
+      <p>Agree between you who takes which, then click yours. A figure that someone has already taken shows their name.</p>
+      <div class="figs" id="figs"></div>
+      <p class="note" id="pickmsg" style="margin-top:12px"></p>
+      <div class="row"><button class="btn ghost" type="button" id="watch">I am only watching the grid</button>
+      <button class="btn ghost" type="button" id="refreshpick">Check who has taken what</button></div>
+    </div>
+  </section>
+
+  <section class="panel" id="p-read"><div id="readbody"></div></section>
+  <section class="panel" id="p-judge"><div id="judgebody"></div></section>
+
+  <section class="panel" id="p-grid">
+    <div class="card">
+      <h2>The class grid</h2>
+      <p>This fills in as each person works. It checks for new answers every fifteen seconds while this tab is open.</p>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" type="button" id="refreshgrid">Refresh now</button><span class="note" id="gridtime"></span></div>
+    </div>
+    <div class="gridwrap"><table class="grid" id="grid"></table></div>
+  </section>
+
+  <section class="panel" id="p-conc">
+    <div class="card">
+      <h2>Compare the five</h2>
+      <p>Work through these with the grid in front of you. Each person speaks for their own figure.</p>
+      <ol class="disc">
+        <li>Sort the five into those that threaten Odysseus's life and those that threaten his homecoming, which the Greeks called his nostos. Which kind does the poem spend more lines on? Which kind is harder for him to resist?</li>
+        <li>Which figures speak or sing, and which have only a body or a movement? What do the ones with a voice use it for?</li>
+        <li>Look along the row on how he gets past. How often is it his own cleverness, and how often is he following instructions from a god or a goddess?</li>
+        <li>Look along the row on cost. Who pays each time?</li>
+        <li>Two of the five end up helping him. What has to happen before a dangerous goddess becomes a helpful one?</li>
+        <li>Circe and Calypso are both found singing at a loom, and so is Penelope in Ithaca. Where would Penelope go on this grid? Where would Nausicaa and Arete from Books 6 and 7 go?</li>
+        <li>Four of these five are described by Odysseus himself to the Phaeacians, who have promised him a ship. Only Calypso in Book 5 is described by the poet. Does that change how far you trust each picture?</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>Your three conclusions</h2>
+      <p>Agree three statements about gender and danger in the <i>Odyssey</i> that the grid supports. Under each one, name the two figures that prove it best. Anyone can type here and everyone sees the same boxes, so choose one person to type at a time.</p>
+      <div class="q"><label for="c1">Conclusion 1</label><textarea id="c1" data-conc="c1"></textarea></div>
+      <div class="q"><label for="c2">Conclusion 2</label><textarea id="c2" data-conc="c2"></textarea></div>
+      <div class="q"><label for="c3">Conclusion 3</label><textarea id="c3" data-conc="c3"></textarea></div>
+      <div class="q"><label for="c4">One figure that does not fit the pattern, and why</label><textarea id="c4" data-conc="c4"></textarea></div>
+      <p class="note" id="concnote" style="margin-top:10px"></p>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ================= CONTENT ================= */
+const ORDER = ["circe","sirens","scylla","charybdis","calypso"];
+const FIGS = {
+circe:{ name:"Circe", slot:"CIRCE", where:"Books 10 and 12",
+  intro:"Circe is a goddess, a daughter of Helios the Sun. She lives on the island of Aeaea. Odysseus stays with her for a year in Book 10 and comes back to her at the start of Book 12.",
+  passages:[
+   {ref:"10.210–243", title:"The house in the wood",
+    qs:["List what Eurylochus's party see and hear before Circe opens the door. Which details make the house attractive, and which should have warned them?",
+        "Find the line that says what the drug is for (about 10.236) and the line that says what does not change in the men (about 10.240). What kind of harm is this? Is it worse than being killed?"]},
+   {ref:"10.274–301", title:"Hermes's briefing",
+    qs:["Hermes, the messenger god, gives Odysseus four steps to follow. List them. Which of them is Odysseus's own idea?",
+        "What does Hermes say Circe could do to him once he has undressed (about 10.301)? What does that tell you about the risk a goddess's bed carries for a hero?"]},
+   {ref:"10.308–347", title:"The cup, the sword, the oath and the bed",
+    qs:["Say who holds the power at each of these moments: the cup, the wand, the sword, Circe at his knees, her invitation, the oath.",
+        "Circe works out who he is at 10.330–331. What does she call him, and what does she say about his mind? Why can the drug not change this man?"]},
+   {ref:"10.388–401 and 10.455–486", title:"The helper, and the year",
+    qs:["When the men are changed back, Circe is given a new feeling (10.398–401). What is it? List what she does for Odysseus and the crew from this point to the end of Book 10.",
+        "The stay lasts a year, and it is the crew who remind Odysseus of home (10.469–474). Is Circe still a danger to him during that year? If so, what kind?"]},
+   {ref:"12.116–126", title:"Circe in Book 12",
+    qs:["In Book 12 Circe gives the instructions for the Sirens, Scylla and Charybdis. Read her answer to Odysseus at 12.116–126. What does she know about him, and how does she speak to him? How far is this from the Circe of 10.229–240?"]}
+  ]},
+sirens:{ name:"The Sirens", slot:"SIRENS", where:"Book 12",
+  intro:"The Sirens are singers who sit in a meadow on an island that the ship must pass. Homer does not say what they look like. The bird-women and mermaids of later art are not in the poem.",
+  passages:[
+   {ref:"12.39–54", title:"Circe's warning",
+    qs:["What happens to a man who listens? Give the detail that shows it. What exactly does that man lose (12.41–44)?",
+        "Circe gives one plan for the crew and a different one for Odysseus. What is the difference? What does she assume about him?"]},
+   {ref:"12.153–167", title:"What Odysseus tells the crew",
+    qs:["Compare what Odysseus tells his men here with what Circe said at 12.47–54. Does he report her instructions exactly? What does he change, add or leave out, and why might he do that?"]},
+   {ref:"12.168–200", title:"The song",
+    qs:["The song itself is 12.184–191. What do the Sirens offer him? Decide whether it is sex, pleasure, knowledge or fame, and give the words that prove it.",
+        "They greet him by name and by his reputation from Troy. Why is that the right bait for this man? If you can, link it to how he reacted when the bard Demodocus sang about Troy in Book 8.",
+        "What does Odysseus do when he hears them (12.192–196)? Who does the physical work that gets the ship past (12.175–180 and 12.195–196)? Did his cleverness save him?"]},
+   {ref:"Thinking question", title:"Singers",
+    qs:["The Sirens are singers. Odysseus is at this moment telling his own story to the Phaeacians in their hall. What do the Sirens have in common with a bard such as Demodocus, and what is the difference between their song and his?"]}
+  ]},
+scylla:{ name:"Scylla", slot:"SCYLLA", where:"Book 12",
+  intro:"Scylla is a monster with six heads who lives in a cave high in a cliff. The cliff stands on one side of a narrow strait. Charybdis, a whirlpool, is on the other side.",
+  passages:[
+   {ref:"12.73–100", title:"Circe describes her",
+    qs:["How is the description built? Collect the numbers, the sounds and the things Circe says cannot be done.",
+        "Scylla is called \"she\". What else in the poem makes her female? Look at her voice (12.85–87) and her mother (12.124–126). Is her being female part of what makes her frightening, or only a label?"]},
+   {ref:"12.108–126", title:"Six men or all of them",
+    qs:["Put Circe's advice into one sentence. What does Odysseus ask in reply, and what fault in him does she name in her answer (12.116–117)?",
+        "What two things does Circe tell him to do at 12.120–126?"]},
+   {ref:"12.201–233", title:"In the strait",
+    qs:["What does Odysseus tell the crew, and what does he keep from them (12.223–225)? Give his reason. Is this good leadership?",
+        "Which of Circe's instructions does he ignore (12.226–230)? What good does it do him? What does it show about the kind of hero he still thinks he is?"]},
+   {ref:"12.234–259", title:"Scylla's six",
+    qs:["How does Scylla strike, which men does she take, and what is the last thing they say?",
+        "In the simile at 12.251–255, who is compared to what? What does the comparison do to the men, and what does it do to Scylla?",
+        "Odysseus gives his own verdict at 12.258–259. He chose this route knowing what it would cost. How should we judge his grief?"]}
+  ]},
+charybdis:{ name:"Charybdis", slot:"CHARYBDIS", where:"Book 12",
+  intro:"Charybdis is a whirlpool with a name. She lies under a low rock with a fig tree on it, opposite Scylla's cliff. The Greeks understood her name to mean the swallower.",
+  passages:[
+   {ref:"12.101–110", title:"Circe describes her",
+    qs:["What does Charybdis do, and how often? What is the only thing growing on her rock? Keep it in mind for the last passage.",
+        "Circe says that even Poseidon, the god of the sea, could not save a ship from her (12.107). Poseidon has been Odysseus's enemy since Book 9. Why does it matter that he is named as powerless here?",
+        "Circe sets a sum at 12.108–110. What is it, and why does it make Charybdis the worse of the two?"]},
+   {ref:"12.234–243", title:"Charybdis seen",
+    qs:["What can the crew see and hear? In the simile at 12.237–238, what is the whirlpool compared to, and what is the effect of using something so ordinary?",
+        "The crew are staring at Charybdis when Scylla strikes (12.244–246). How do the two work as a pair?"]},
+   {ref:"12.426–446", title:"Alone, on the way back",
+    qs:["Odysseus is now alone on the wreckage. Follow his actions verb by verb. What saves him: the detail Circe gave him, his strength, his timing, luck, or Zeus (12.445–446)?",
+        "In the simile at 12.439–441, what time of day is being described, and through whose daily life? Why put that picture here?"]},
+   {ref:"Thinking question", title:"A mouth with a name",
+    qs:["Charybdis never speaks and has no body. The poem describes only what she does, and still calls her \"she\" and \"divine\". Scylla is a body with too many mouths. Charybdis is one mouth with no body. What might it mean that the two deadliest things in the sea are both female and both swallow men?"]}
+  ]},
+calypso:{ name:"Calypso", slot:"CALYPSO", where:"Books 5 and 12",
+  intro:"Calypso is a goddess, also called a nymph, who lives alone on the island of Ogygia. Her name is linked to a Greek verb meaning to hide. Odysseus is with her for seven years, and Book 5 tells how he leaves.",
+  passages:[
+   {ref:"5.55–84", title:"The cave",
+    qs:["Describe the cave and what surrounds it. Even the god Hermes stops to look. What is Calypso doing when he arrives (5.61–62)? Which other women in the poem are found doing the same?",
+        "Where is Odysseus, and what is he doing (5.81–84)? What does the contrast between the place and the man tell you about the kind of danger he is in?"]},
+   {ref:"5.116–147", title:"Calypso's complaint",
+    qs:["What double standard does Calypso accuse the male gods of? Give her two examples.",
+        "What does she say she has done for Odysseus, and what did she plan to give him (5.130–137)? How far does this speech make you take her side?"]},
+   {ref:"5.151–159 and 5.203–224", title:"The offer",
+    qs:["How does the poet describe Odysseus's nights at 5.154–156? Who has the power in this relationship? How is that unusual for a hero?",
+        "What does Calypso offer at 5.206–213, and what does Odysseus answer at 5.215–224? Why does he choose a mortal wife and more suffering?"]},
+   {ref:"5.160–191 and 5.228–268", title:"Letting him go",
+    qs:["Once Zeus has given the order, list everything Calypso does to help him leave.",
+        "Odysseus makes her swear an oath before he will trust her (5.177–187). He does the same with Circe at 10.343–345. What does that show about how he sees goddesses?"]},
+   {ref:"12.447–453 and about 9.29–33", title:"How Odysseus tells it",
+    qs:["Read how Odysseus sums up Calypso to the Phaeacians: the three adjectives at 12.449, and the lines near the start of Book 9 where he names Calypso and Circe together. Is his summary fair to what you read in Book 5?"]}
+  ]}
+};
+
+const THREATS = ["Death by violence","Being eaten or swallowed","Forgetting home","Delay","Pleasure and comfort","Knowledge and fame","Losing his manhood or status","Becoming immortal and never going home"];
+const PAST = ["His own cunning","His own strength or endurance","A male god's help or order","Circe's instructions","The crew's work","Running away","Making her swear an oath","Going to bed with her","Losing some of his men"];
+const VOICE = ["Speaks at length","Sings","Makes a sound but has no words","Silent"];
+
+/* judgement fields: same for every figure, so the grid compares like with like */
+const JUDGE = [
+  {id:"threat", type:"chips", max:2, opts:THREATS, label:"What kind of threat is she?", hint:"Choose the one or two that fit best."},
+  {id:"threatWhy", type:"text", label:"Explain your choice in one or two sentences."},
+  {id:"life", type:"scale", label:"How great a danger is she to his life?", lo:"none", hi:"deadly"},
+  {id:"nostos", type:"scale", label:"How great a danger is she to his homecoming (his nostos)?", lo:"none", hi:"could end it"},
+  {id:"voice", type:"chips", max:1, opts:VOICE, label:"Does she have a voice?"},
+  {id:"past", type:"chips", max:3, opts:PAST, label:"How does Odysseus get past her?", hint:"Choose up to three."},
+  {id:"pastWhy", type:"text", label:"Who really gets him past her: Odysseus, or someone else? One or two sentences."},
+  {id:"cost", type:"text", label:"What does getting past her cost, and who pays?"},
+  {id:"sympathy", type:"scale", label:"How much sympathy does the poem invite for her?", lo:"none", hi:"a great deal"},
+  {id:"female", type:"text", label:"How does her being female matter to the danger?", hint:"Think about what she offers or does that a male monster such as the Cyclops does not."},
+  {id:"quote", type:"line", label:"Your best short quotation for her, with its line number."},
+  {id:"claim", type:"text", label:"Finish this sentence: \"This figure suggests that in the Odyssey, female danger is…\""}
+];
+const GRIDROWS = [
+  ["threat","Kind of threat"],["life","Danger to his life"],["nostos","Danger to his homecoming"],["voice","Voice"],
+  ["past","How he gets past"],["cost","What it costs"],["sympathy","Sympathy invited"],["female","How being female matters"],
+  ["quote","Key quotation"],["claim","Female danger is…"]
+];
+
+/* ================= CLOUD (shared Vestigia store) =================
+   One record per FIGURE, not per pupil: key = book::CLASS::FIGURE. Any pupil with the class code can read the five
+   figure records, which is what lets the grid fill in for everyone without the teacher token. */
+const CLOUD = { endpoint:"https://vestigia-store.mrbeasley930.workers.dev", book:"odyfig27-l1" };
+const LESSON = { id:"FIG1", title:"Female and monstrous figures: Circe, Sirens, Scylla, Charybdis, Calypso" };
+let IDENTITY = null;          // {cls, cand}
+let MYFIG = null;             // key in FIGS, or null when watching
+let state = { answers:{}, judge:{}, done:false };
+let remote = {};              // fig -> record data from the store
+let conc = { c1:"", c2:"", c3:"", c4:"", by:"", savedAt:"" };
+let pushTimer = null, concTimer = null, pollTimer = null;
+
+function keyFor(slot){ return CLOUD.book+"::"+IDENTITY.cls+"::"+slot; }
+async function pullSlot(slot){
+  try{ const r = await fetch(CLOUD.endpoint+"?key="+encodeURIComponent(keyFor(slot)),{method:"GET"});
+    if(!r.ok) return null; const j = await r.json(); return j && j.data ? j.data : null;
+  }catch(e){ return undefined; }           // undefined = could not reach the store
+}
+async function pushSlot(slot, blob){
+  try{ const r = await fetch(CLOUD.endpoint,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({key:keyFor(slot),cls:IDENTITY.cls,cand:slot,book:CLOUD.book,data:blob,savedAt:new Date().toISOString()})});
+    return r.ok;
+  }catch(e){ return false; }
+}
+function lsKey(){ return "odyfig_L1_"+IDENTITY.cls+"_"+IDENTITY.cand+"_"+(MYFIG||"none"); }
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+
+function $(id){ return document.getElementById(id); }
+function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!=null) e.textContent=text; return e; }
+function clock(){ return new Date().toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}); }
+function setSync(txt, bad){ const s=$("sync"); s.textContent=txt; s.style.color = bad ? "#f0a39b" : ""; }
+function sameName(a,b){ return String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase(); }
+
+/* ---------- my record ---------- */
+function myBlob(){
+  const f = FIGS[MYFIG];
+  let total=0, done=0;
+  f.passages.forEach((p,pi)=>p.qs.forEach((q,qi)=>{ total++; if((state.answers[pi+"_"+qi]||"").trim()) done++; }));
+  JUDGE.forEach(j=>{ total++; const v=state.judge[j.id]; if(Array.isArray(v)?v.length:(v!==undefined&&String(v).trim()!=="")) done++; });
+  return { name:IDENTITY.cand, lesson:LESSON.id, title:LESSON.title, figure:f.name, fig:MYFIG,
+           answers:state.answers, judge:state.judge, done:!!state.done, progress:{done:done,total:total},
+           savedAt:new Date().toISOString() };
+}
+function saveSoon(){
+  if(!MYFIG) return;
+  lsSet(lsKey(), JSON.stringify(state));
+  setSync("Saving…");
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(async ()=>{
+    const blob = myBlob(); remote[MYFIG] = blob;
+    const ok = await pushSlot(FIGS[MYFIG].slot, blob);
+    setSync(ok ? "Saved to the class grid at "+clock() : "Not saved to the grid. Your work is kept on this computer. Check the internet connection.", !ok);
+    updateProgress();
+  }, 1200);
+}
+function updateProgress(){
+  if(!MYFIG){ $("figline").textContent="Watching the grid"; return; }
+  const b = myBlob();
+  $("figline").innerHTML = "";
+  $("figline").append("Your figure: ", el("b",null,FIGS[MYFIG].name), "  ·  "+b.progress.done+" of "+b.progress.total+" answered");
+}
+
+/* ---------- rendering: passages ---------- */
+function renderRead(){
+  const body = $("readbody"); body.innerHTML="";
+  if(!MYFIG){ body.append(needFigCard()); return; }
+  const f = FIGS[MYFIG];
+  const top = el("div","card"); top.style.borderLeftColor = "var(--"+MYFIG+")";
+  top.append(el("h2",null,f.name+" ("+f.where+")"), el("p",null,f.intro),
+    el("p",null,"Read each passage in Wilson, then answer in full sentences. Quote a few words and give the line number wherever you can. Your answers save as you type."));
+  body.append(top);
+  f.passages.forEach((p,pi)=>{
+    const c = el("div","card"); c.style.borderLeftColor = "var(--"+MYFIG+")";
+    const h = el("h3"); h.append(el("span","ref",p.ref), p.title); c.append(h);
+    p.qs.forEach((q,qi)=>{
+      const id="a_"+pi+"_"+qi, w=el("div","q"), lab=el("label",null,q); lab.htmlFor=id;
+      const ta=el("textarea"); ta.id=id; ta.value=state.answers[pi+"_"+qi]||"";
+      ta.addEventListener("input",()=>{ state.answers[pi+"_"+qi]=ta.value; saveSoon(); });
+      w.append(lab,ta); c.append(w);
+    });
+    body.append(c);
+  });
+  const end = el("div","card"); end.append(el("p",null,"When you have answered these, go on to your judgements."));
+  const b = el("button","btn","Go to my judgements"); b.type="button"; b.addEventListener("click",()=>go("judge"));
+  const r = el("div","row"); r.append(b); end.append(r); body.append(end);
+}
+function needFigCard(){
+  const c = el("div","card"); c.append(el("h2",null,"No figure chosen"), el("p",null,"You are watching the grid. To work on a figure, go to the Start tab and choose one."));
+  return c;
+}
+
+/* ---------- rendering: judgements ---------- */
+function renderJudge(){
+  const body = $("judgebody"); body.innerHTML="";
+  if(!MYFIG){ body.append(needFigCard()); return; }
+  const f = FIGS[MYFIG];
+  const c = el("div","card"); c.style.borderLeftColor = "var(--"+MYFIG+")";
+  c.append(el("h2",null,"Your judgements on "+f.name),
+    el("p",null,"Everyone answers these same questions about their own figure. What you put here goes straight into the class grid, so write it for the others to read. Keep each written answer to one or two sentences and be ready to defend it."));
+  JUDGE.forEach(j=>{
+    const w = el("div","q"), lab = el("label",null,j.label);
+    if(j.hint){ lab.append(" "); lab.append(el("span","hint",j.hint)); }
+    w.append(lab);
+    if(j.type==="text"||j.type==="line"){
+      const inp = j.type==="text" ? el("textarea") : el("input"); if(j.type==="line") inp.type="text";
+      inp.id="j_"+j.id; lab.htmlFor=inp.id; inp.value=state.judge[j.id]||"";
+      inp.addEventListener("input",()=>{ state.judge[j.id]=inp.value; saveSoon(); });
+      w.append(inp);
+    } else if(j.type==="chips"){
+      const box = el("div","chips"); box.setAttribute("role","group"); box.setAttribute("aria-label",j.label);
+      j.opts.forEach(o=>{
+        const b = el("button","chip",o); b.type="button";
+        const cur = ()=>Array.isArray(state.judge[j.id])?state.judge[j.id]:[];
+        b.setAttribute("aria-pressed", cur().includes(o) ? "true":"false");
+        b.addEventListener("click",()=>{
+          let v = cur().slice();
+          if(v.includes(o)) v = v.filter(x=>x!==o);
+          else { if(j.max===1) v=[o]; else if(v.length>=j.max) v.shift(), v.push(o); else v.push(o); }
+          state.judge[j.id]=v;
+          box.querySelectorAll(".chip").forEach(ch=>ch.setAttribute("aria-pressed", v.includes(ch.textContent)?"true":"false"));
+          saveSoon();
+        });
+        box.append(b);
+      });
+      w.append(box);
+    } else if(j.type==="scale"){
+      const box = el("div","scale"); box.setAttribute("role","group"); box.setAttribute("aria-label",j.label);
+      box.append(el("span",null,j.lo));
+      for(let n=1;n<=5;n++){
+        const b = el("button","chip",String(n)); b.type="button";
+        b.setAttribute("aria-pressed", state.judge[j.id]===n ? "true":"false");
+        b.addEventListener("click",()=>{ state.judge[j.id]=n;
+          box.querySelectorAll(".chip").forEach(ch=>ch.setAttribute("aria-pressed", ch.textContent===String(n)?"true":"false")); saveSoon(); });
+        box.append(b);
+      }
+      box.append(el("span",null,j.hi));
+      w.append(box);
+    }
+    c.append(w);
+  });
+  const r = el("div","row");
+  const done = el("button","btn gold", state.done ? "Marked as ready. Click to undo" : "My column is ready"); done.type="button";
+  done.addEventListener("click",()=>{ state.done=!state.done; done.textContent = state.done ? "Marked as ready. Click to undo" : "My column is ready"; saveSoon(); });
+  const g = el("button","btn","See the class grid"); g.type="button"; g.addEventListener("click",()=>go("grid"));
+  r.append(done,g); c.append(r);
+  body.append(c);
+}
+
+/* ---------- rendering: grid ---------- */
+function cellFor(rowId, d){
+  const td = el("td"); const j = (d && d.judge) || {};
+  const txt = (v)=>{ if(v && String(v).trim()) td.append(el("div",null,String(v))); };
+  const tags = (arr)=>{ (arr||[]).forEach(t=>td.append(el("span","tag",t))); };
+  const meter = (n)=>{ if(!n) return; const m=el("div","meter"); m.setAttribute("aria-label",n+" out of 5");
+    for(let i=1;i<=5;i++){ const b=el("i", i<=n?"on":""); m.append(b); } td.append(m, el("div","note",n+" / 5")); };
+  if(rowId==="threat"){ tags(j.threat); txt(j.threatWhy); }
+  else if(rowId==="life") meter(j.life);
+  else if(rowId==="nostos") meter(j.nostos);
+  else if(rowId==="voice") tags(j.voice);
+  else if(rowId==="past"){ tags(j.past); txt(j.pastWhy); }
+  else if(rowId==="sympathy") meter(j.sympathy);
+  else txt(j[rowId]);
+  if(!td.childNodes.length) td.append(el("span","empty","not yet"));
+  return td;
+}
+function renderGrid(){
+  const t = $("grid"); t.innerHTML="";
+  const thead = el("thead"), hr = el("tr"); const corner = el("th","rowh",""); hr.append(corner);
+  ORDER.forEach(k=>{
+    const d = (k===MYFIG) ? myBlob() : remote[k];
+    const th = el("th",null,FIGS[k].name); th.style.background="var(--"+k+")";
+    const sm = el("small",null, d && d.name ? d.name : "nobody yet"); th.append(sm);
+    if(d && d.progress){ th.append(el("span","pill", d.done ? "ready" : d.progress.done+" of "+d.progress.total)); }
+    hr.append(th);
+  });
+  thead.append(hr); t.append(thead);
+  const tb = el("tbody");
+  GRIDROWS.forEach(([id,label])=>{
+    const tr = el("tr"); const th = el("th","rowh",label); th.scope="row"; tr.append(th);
+    ORDER.forEach(k=>tr.append(cellFor(id, (k===MYFIG) ? myBlob() : remote[k])));
+    tb.append(tr);
+  });
+  t.append(tb);
+}
+async function refreshRemote(){
+  if(!IDENTITY) return false;
+  const res = await Promise.all(ORDER.map(k=>pullSlot(FIGS[k].slot)));
+  let reached = false;
+  res.forEach((d,i)=>{ if(d!==undefined){ reached=true; if(d) remote[ORDER[i]]=d; } });
+  const g = await pullSlot("GROUP");
+  if(g && (!conc.savedAt || (g.savedAt||"") > conc.savedAt)){ conc = Object.assign(conc,g); fillConc(false); }
+  $("gridtime").textContent = reached ? "Last checked at "+clock() : "Could not reach the class grid. Check the internet connection.";
+  return reached;
+}
+async function refreshAndDraw(){ await refreshRemote(); renderGrid(); renderPicker(); }
+
+/* ---------- group conclusions (one shared record) ---------- */
+function fillConc(force){
+  document.querySelectorAll("[data-conc]").forEach(t=>{ if(force || document.activeElement!==t) t.value = conc[t.dataset.conc]||""; });
+  $("concnote").textContent = conc.by ? "Last changed by "+conc.by+" at "+new Date(conc.savedAt).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : "";
+}
+function wireConc(){
+  document.querySelectorAll("[data-conc]").forEach(t=>t.addEventListener("input",()=>{
+    if(!IDENTITY) return;
+    conc[t.dataset.conc]=t.value; conc.by=IDENTITY.cand; conc.savedAt=new Date().toISOString();
+    $("concnote").textContent="Saving…";
+    clearTimeout(concTimer);
+    concTimer=setTimeout(async ()=>{ const ok=await pushSlot("GROUP", Object.assign({name:"GROUP",lesson:LESSON.id},conc));
+      $("concnote").textContent = ok ? "Saved for everyone at "+clock() : "Not saved. Check the internet connection."; },1200);
+  }));
+}
+
+/* ---------- figure picker ---------- */
+function renderPicker(){
+  const box = $("figs"); box.innerHTML="";
+  ORDER.forEach(k=>{
+    const f = FIGS[k], d = remote[k];
+    const mine = d && IDENTITY && sameName(d.name, IDENTITY.cand);
+    const taken = d && d.name && !mine;
+    const b = el("button","figbtn "+(taken?"taken":"free")); b.type="button"; b.style.borderTopColor="var(--"+k+")";
+    b.append(el("b",null,f.name), el("span","w",f.where),
+      el("span","who", mine ? "Yours. Click to carry on" : taken ? "Taken by "+d.name : "Free"));
+    b.addEventListener("click",()=>pick(k, taken ? d.name : null));
+    box.append(b);
+  });
+}
+let armed = null;
+function pick(k, takenBy){
+  if(takenBy && armed!==k){ armed=k;
+    $("pickmsg").textContent = FIGS[k].name+" is already being done by "+takenBy+". If you are taking over from them, click "+FIGS[k].name+" again. Their answers stay in place and you carry on from them.";
+    return; }
+  armed=null; $("pickmsg").textContent="";
+  MYFIG = k;
+  const d = remote[k];
+  let local = null; try{ local = JSON.parse(lsGet(lsKey())||"null"); }catch(e){}
+  if(d && d.answers) state = { answers:d.answers||{}, judge:d.judge||{}, done:!!d.done };
+  else if(local) state = local;
+  else state = { answers:{}, judge:{}, done:false };
+  $("changefig").hidden=false;
+  renderRead(); renderJudge(); updateProgress(); saveSoon(); go("read");
+}
+function watchOnly(){ MYFIG=null; updateProgress(); renderRead(); renderJudge(); go("grid"); }
+
+/* ---------- tabs ---------- */
+function go(tab){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===tab));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("active", p.id==="p-"+tab));
+  clearInterval(pollTimer);
+  if(tab==="grid"||tab==="conc"||tab==="start"){ refreshAndDraw(); pollTimer=setInterval(refreshAndDraw,15000); }
+  window.scrollTo(0,0);
+}
+document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>go(t.dataset.tab)));
+$("refreshgrid").addEventListener("click",refreshAndDraw);
+$("refreshpick").addEventListener("click",refreshAndDraw);
+$("watch").addEventListener("click",watchOnly);
+$("changefig").addEventListener("click",()=>go("start"));
+wireConc();
+
+/* ---------- sign-in gate ---------- */
+function showGate(){
+  const ov=document.createElement('div'); ov.id='rp-gate';
+  ov.style.cssText="position:fixed;inset:0;z-index:9999;background:rgba(15,25,45,.94);display:flex;align-items:center;justify-content:center;padding:20px;font-family:Georgia,serif;overflow:auto;";
+  ov.innerHTML=
+    '<div style="max-width:430px;width:100%;background:#fff;border-top:8px solid #d4af37;border-radius:14px;padding:26px 26px 22px;box-shadow:0 18px 50px rgba(0,0,0,.4);color:#1a2a3a;">'
+    +'<div style="font-size:13px;letter-spacing:1px;color:#2E75B6;font-weight:700;">YEAR 12 CLASSICAL CIVILISATION · THE WORLD OF THE HERO</div>'
+    +'<div style="font-size:22px;color:#1F3864;font-weight:800;margin:2px 0 4px;">Female and Monstrous Figures</div>'
+    +'<div style="font-size:13px;color:#556;margin-bottom:16px;">Sign in so your work saves and joins the class grid.</div>'
+    +'<label for="g-cls" style="font-size:13px;color:#1F3864;font-weight:700;">Class code</label>'
+    +'<input id="g-cls" autocomplete="off" placeholder="e.g. 12A" style="width:100%;box-sizing:border-box;margin:5px 0 12px;padding:11px;border-radius:8px;border:1px solid #c5d0e0;font-size:15px;font-family:Georgia,serif;">'
+    +'<label for="g-cand" style="font-size:13px;color:#1F3864;font-weight:700;">Your first name</label>'
+    +'<input id="g-cand" autocomplete="off" placeholder="e.g. Marcus" style="width:100%;box-sizing:border-box;margin:5px 0 4px;padding:11px;border-radius:8px;border:1px solid #c5d0e0;font-size:15px;font-family:Georgia,serif;">'
+    +'<div id="g-err" style="color:#c00;font-size:12.5px;min-height:17px;margin:3px 0 6px;"></div>'
+    +'<button id="g-go" type="button" style="width:100%;padding:12px;border:0;border-radius:8px;background:#1F3864;color:#fff;font-weight:700;font-size:15px;cursor:pointer;font-family:Georgia,serif;">Start</button>'
+    +'<div style="font-size:11.5px;color:#7e93a3;margin-top:13px;line-height:1.5;">Everyone must type the <b>same class code</b>, or you will not see each other in the grid. Your class code comes from Mr Beasley.</div>'
+    +'</div>';
+  document.body.appendChild(ov);
+  $('g-go').addEventListener('click',signIn);
+  ov.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); signIn(); } });
+  $('g-cls').focus();
+}
+async function signIn(){
+  const cls=($('g-cls').value||'').trim().toUpperCase().replace(/\s+/g,'');
+  let cand=($('g-cand').value||'').trim();
+  if(window.__firstNameOnly) cand=window.__firstNameOnly(cand);
+  const err=$('g-err');
+  if(!cls){ err.textContent="Enter your class code."; return; }
+  if(!/^.{2,40}$/.test(cand)){ err.textContent="Please enter your first name (2-40 characters)."; return; }
+  IDENTITY={cls:cls,cand:cand};
+  $('g-go').textContent="Loading…";
+  const reached = await refreshRemote();
+  const g=$('rp-gate'); if(g) g.remove();
+  $("whoami").innerHTML=""; $("whoami").append("Signed in: ", el("b",null,cls+" · "+cand));
+  setSync(reached ? "Connected to the class grid" : "Could not reach the class grid. You can still work, and it will save on this computer.", !reached);
+  fillConc(true); renderPicker(); renderGrid(); renderRead(); renderJudge();
+  /* come back to your own figure after a reload */
+  const mineK = ORDER.find(k=>remote[k] && sameName(remote[k].name,cand));
+  if(mineK) pick(mineK,null); else go("start");
+}
+renderPicker(); renderGrid(); renderRead(); renderJudge();
+showGate();
+</script>
+<script id="vs-safety-notice">
+/* Online-safety notice (6 Nov 2026). Pupils are told that the page is monitored by Smoothwall.
+   Shows a notice in the sign-in box (before the Sign in button) and a slim strip at the foot
+   of the screen. To change the wording, edit LONG and SHORT below and re-run patch_safety_notice.py:
+   it replaces this block in every listed page. */
+(function(){
+  if (window.__vsSafety) return; window.__vsSafety = true;
+  var LONG = "This page is monitored by the school's online safety system (Smoothwall). Anything you type, including in games and answer boxes, can be flagged and passed to the pastoral team. A comment made as a joke, such as 'I want to die', will be treated as serious. If something is genuinely worrying you, please talk to your form tutor, Head of Year or any member of staff.";
+  var SHORT = "Monitored by Smoothwall: anything you type can be flagged to the pastoral team. Worried about something? Talk to your tutor, Head of Year or any member of staff.";
+
+  function gateNotice(){
+    if (document.getElementById("vs-safety-gate")) return;
+    var go = document.getElementById("g-go"), cand = document.getElementById("g-cand");
+    if (!go && !cand) return;
+    var box = document.createElement("div");
+    box.id = "vs-safety-gate"; box.setAttribute("role", "note");
+    box.style.cssText = "margin:12px 0;padding:10px 12px;border:2px solid #b3261e;border-radius:10px;background:#fff4f2;color:#1a1a1a;font-family:system-ui,Segoe UI,Arial,sans-serif;font-size:14px;line-height:1.45;text-align:left;max-width:100%;box-sizing:border-box";
+    box.innerHTML = '<div style="font-weight:700;margin-bottom:4px">Before you start</div>';
+    var p = document.createElement("div"); p.textContent = LONG; box.appendChild(p);
+    if (go && go.parentNode) go.parentNode.insertBefore(box, go);
+    else cand.parentNode.appendChild(box);
+  }
+
+  function strip(){
+    if (document.getElementById("vs-safety-strip") || !document.body) return;
+    var framed = false; try { framed = window.self !== window.top; } catch(e){ framed = true; }
+    if (framed) return;   // a game shown inside an arcade page: the outer page carries the strip
+    var s = document.createElement("div");
+    s.id = "vs-safety-strip"; s.setAttribute("role", "note"); s.textContent = SHORT;
+    s.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:40;background:#1a1a1a;color:#fff;font-family:system-ui,Segoe UI,Arial,sans-serif;font-size:12.5px;line-height:1.35;padding:5px 12px;text-align:center;border-top:2px solid #b3261e";
+    document.body.appendChild(s);
+    var css = document.createElement("style");
+    css.textContent = "body{padding-bottom:calc(var(--vs-safety-h,34px) + 4px) !important}@media print{#vs-safety-strip,#vs-safety-gate{display:none !important}}";
+    document.head.appendChild(css);
+    var lift = 0;
+    function findBar(){   // a page toolbar fixed to the bottom of the screen: sit the strip just above it
+      lift = 0;
+      var all = document.body.querySelectorAll("*");
+      for (var i = 0; i < all.length; i++) {
+        var el = all[i]; if (el === s || s.contains(el)) continue;
+        var cs = getComputedStyle(el); if (cs.position !== "fixed" || cs.display === "none" || cs.visibility === "hidden") continue;
+        var r = el.getBoundingClientRect();
+        if (r.height > 0 && r.height < innerHeight * 0.4 && r.width > innerWidth * 0.5 && r.bottom >= innerHeight - 2 && r.top < innerHeight - 2) lift = Math.max(lift, Math.round(innerHeight - r.top));
+      }
+    }
+    var fit = function(){ s.style.bottom = lift + "px"; document.documentElement.style.setProperty("--vs-safety-h", (s.offsetHeight + lift) + "px"); };
+    findBar(); fit();
+    window.addEventListener("resize", function(){ findBar(); fit(); });
+    window.addEventListener("load", function(){ findBar(); fit(); });
+  }
+
+  function run(){ gateNotice(); strip(); }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", run); else run();
+  new MutationObserver(gateNotice).observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
+</body>
+</html>
